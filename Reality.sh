@@ -57,6 +57,14 @@ create_shortcut() {
     echo -e "${green}✅ 快捷键 b 和 B 已创建，可以在任意终端输入 b 或 B 启动脚本${re}"
 }
 
+# ================== 下载 Reality 安装脚本 ==================
+download_reality_script() {
+    TMP_SCRIPT="/tmp/azreality.sh"
+    curl -fsSL -o "$TMP_SCRIPT" https://raw.githubusercontent.com/Polarisiu/proxy/main/azreality.sh
+    chmod +x "$TMP_SCRIPT"
+    echo "$TMP_SCRIPT"
+}
+
 # ================== 主菜单 ==================
 while true; do
     clear
@@ -81,10 +89,12 @@ while true; do
             port=$(check_port $port)
 
             echo -e "${green}开始安装 Reality...${re}"
-            PORT=$port bash <(curl -fsSL https://raw.githubusercontent.com/Polarisiu/proxy/main/azreality.sh)
+            REALITY_SCRIPT=$(download_reality_script)
+            PORT=$port bash "$REALITY_SCRIPT"
 
             echo -e "${green}Reality 安装完成！端口: $port${re}"
 
+            # 安装完成后立即创建快捷键
             create_shortcut
 
             read -p "按回车返回菜单..."
