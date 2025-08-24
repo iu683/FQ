@@ -12,6 +12,9 @@ red="\033[31m"
 yellow="\033[33m"
 re="\033[0m"
 
+# ================== 固定路径 ==================
+LOCAL_SCRIPT="/usr/local/bin/reality_menu.sh"
+
 # ================== 工具函数 ==================
 random_port() { shuf -i 2000-65000 -n 1; }
 
@@ -19,7 +22,7 @@ check_port() {
     local port=$1
     while [[ -n $(lsof -i :$port 2>/dev/null) ]]; do
         echo -e "${red}${port}端口已被占用，请更换端口${re}"
-        read -p "请输入端口（回车随机端口）: " port
+        read -p "请输入端口（直接回车使用随机端口）: " port
         [[ -z $port ]] && port=$(random_port) && echo -e "${green}使用随机端口: $port${re}"
     done
     echo $port
@@ -45,25 +48,6 @@ install_jq() {
     fi
 }
 
-# ================== 创建快捷键（管道安全） ==================
-create_shortcut() {
-    TARGET="/usr/local/bin/reality_menu.sh"
-
-    # 管道执行时，把脚本内容写入文件
-    if [[ "$0" == "/dev/fd/"* || "$0" == "/proc/"* ]]; then
-        echo -e "${yellow}⚠ 当前脚本通过管道执行，正在保存到 $TARGET ...${re}"
-        tail -n +1 /proc/$$/fd/0 > "$TARGET"
-        chmod +x "$TARGET"
-    else
-        cp "$(realpath "$0")" "$TARGET"
-        chmod +x "$TARGET"
-    fi
-
-    ln -sf "$TARGET" /usr/local/bin/b
-    ln -sf "$TARGET" /usr/local/bin/B
-    echo -e "${green}✅ 快捷键 b 和 B 已创建${re}"
-}
-
 # ================== 下载 Reality 安装脚本 ==================
 download_reality_script() {
     TMP_SCRIPT="/tmp/azreality.sh"
@@ -71,6 +55,52 @@ download_reality_script() {
     chmod +x "$TMP_SCRIPT"
     echo "$TMP_SCRIPT"
 }
+
+# ================== 创建快捷键 ==================
+create_shortcut() {
+    ln -sf "$LOCAL_SCRIPT" /usr/local/bin/b
+    ln -sf "$LOCAL_SCRIPT" /usr/local/bin/B
+    echo -e "${green}✅ 快捷键 b 和 B 已创建${re}"
+}
+
+# ================== 安装 Reality ==================
+install_reality() {
+    install_lsof
+    install_jq
+    read -p "请输入Reality节点端口（回车随机端口）: " port
+    [[ -z $port ]] && port=$(random_port)
+    port=$(check_port $port)
+
+    echo -e "${green}开始安装 Reality...${re}"
+    TMP_SCRIPT=$(download_reality_script)
+    PORT=$port bash "$TMP_SCRIPT"
+
+    echo -e "${green}Reality 安装完成！端口: $port${re}"
+}
+
+# ================== 卸载 Reality ==================
+uninstall_reality() {
+    if [ -f "/etc/alpine-release" ]; then
+        pkill -f 'web'
+        rm -rf ~/app
+    else
+        systemctl stop xray 2>/dev/null
+        systemctl disable xray 2>/dev/null
+        rm -f /usr/local/bin/xray /etc/systemd/system/xray.service /usr/local/etc/xray/config.json /usr/local/share/xray/geoip.dat /usr/local/share/xray/geosite.dat /etc/systemd/system/xray@.service
+        rm -rf /var/log/xray /var/lib/xray
+        systemctl daemon-reload
+    fi
+
+    rm -f "$LOCAL_SCRIPT" /usr/local/bin/b /usr/local/bin/B
+    echo -e "${green}✅ Reality 及快捷键已卸载${re}"
+}
+
+# ================== 下载自身到固定路径 ==================
+if [ ! -f "$LOCAL_SCRIPT" ]; then
+    echo -e "${yellow}⚠ 正在下载脚本到 $LOCAL_SCRIPT ...${re}"
+    curl -fsSL -o "$LOCAL_SCRIPT"https://raw.githubusercontent.com/iu683/FQ/main/Reality.sh
+    chmod +x "$LOCAL_SCRIPT"
+fi
 
 # ================== 主菜单 ==================
 while true; do
@@ -88,17 +118,7 @@ while true; do
     case $sub_choice in
         1)
             clear
-            install_lsof
-            install_jq
-            read -p $'\033[1;32m请输入Reality节点端口（回车随机端口）: \033[0m' port
-            [[ -z $port ]] && port=$(random_port)
-            port=$(check_port $port)
-
-            echo -e "${green}开始安装 Reality...${re}"
-            REALITY_SCRIPT=$(download_reality_script)
-            PORT=$port bash "$REALITY_SCRIPT"
-
-            echo -e "${green}Reality 安装完成！端口: $port${re}"
+            install_reality
             create_shortcut
             read -p "按回车返回菜单..."
             ;;
@@ -127,7 +147,7 @@ while true; do
         3)
             clear
             install_jq
-            read -p $'\033[1;32m请输入新 Reality 端口（回车随机端口）: \033[0m' new_port
+            read -p "请输入新 Reality 端口（回车随机端口）: " new_port
             [[ -z $new_port ]] && new_port=$(random_port)
             new_port=$(check_port $new_port)
 
@@ -145,18 +165,7 @@ while true; do
             ;;
         4)
             clear
-            if [ -f "/etc/alpine-release" ]; then
-                pkill -f 'web'
-                rm -rf ~/app
-            else
-                systemctl stop xray 2>/dev/null
-                systemctl disable xray 2>/dev/null
-                rm -f /usr/local/bin/xray /etc/systemd/system/xray.service /usr/local/etc/xray/config.json /usr/local/share/xray/geoip.dat /usr/local/share/xray/geosite.dat /etc/systemd/system/xray@.service
-                rm -rf /var/log/xray /var/lib/xray
-                systemctl daemon-reload
-            fi
-            rm -f /usr/local/bin/reality_menu.sh /usr/local/bin/b /usr/local/bin/B
-            echo -e "${green}✅ Reality 及快捷键已卸载${re}"
+            uninstall_reality
             read -p "按回车返回菜单..."
             ;;
         0)
