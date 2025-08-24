@@ -85,22 +85,17 @@ install_reality() {
 
 # ================== 卸载 Reality ==================
 uninstall_reality() {
-    if [ -f "/etc/alpine-release" ]; then
-        pkill -f 'web'
-        rm -rf ~/app
-    else
-        systemctl stop xray 2>/dev/null
-        systemctl disable xray 2>/dev/null
-        rm -f /usr/local/bin/xray /etc/systemd/system/xray.service /usr/local/etc/xray/config.json /usr/local/share/xray/geoip.dat /usr/local/share/xray/geosite.dat /etc/systemd/system/xray@.service
-        rm -rf /var/log/xray /var/lib/xray
-        systemctl daemon-reload
-    fi
-
-    rm -f "$SCRIPT_PATH" /usr/local/bin/b /usr/local/bin/B
-    echo -e "${green}✅ Reality 及快捷键已卸载${re}"
-    read -rp "按回车返回菜单..."
+    echo -e "${yellow}⚠ 正在卸载 Reality...${re}"
+    systemctl stop reality 2>/dev/null
+    systemctl disable reality 2>/dev/null
+    rm -f /etc/systemd/system/reality.service
+    rm -f /usr/local/bin/xray
+    rm -rf /etc/reality
+    rm -f /usr/local/bin/reality_menu.sh /usr/local/bin/b /usr/local/bin/B
+    systemctl daemon-reload
+    echo -e "${green}✅ Reality 已卸载完成${re}"
+    exit 0
 }
-
 # ================== 主菜单 ==================
 while true; do
     clear
