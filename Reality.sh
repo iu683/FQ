@@ -61,6 +61,28 @@ create_shortcut() {
     ln -sf "$LOCAL_SCRIPT" /usr/local/bin/b
     ln -sf "$LOCAL_SCRIPT" /usr/local/bin/B
     echo -e "${green}✅ 快捷键 b 和 B 已创建${re}"
+
+    # 临时加入 PATH 并刷新命令缓存
+    if [[ ":$PATH:" != *":/usr/local/bin:"* ]]; then
+        export PATH=$PATH:/usr/local/bin
+        echo -e "${yellow}⚠ /usr/local/bin 不在 PATH 中，已临时加入当前会话${re}"
+    fi
+    hash -r
+    echo -e "${green}现在可以直接在终端使用 b 或 B 启动脚本${re}"
+}
+
+# ================== 保存自身到固定路径（管道安全） ==================
+save_self() {
+    # 如果是通过管道执行
+    if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "/proc/"* ]]; then
+        echo -e "${yellow}⚠ 当前脚本通过管道执行，正在保存到 $LOCAL_SCRIPT ...${re}"
+        tail -n +1 /proc/$$/fd/0 > "$LOCAL_SCRIPT"
+        chmod +x "$LOCAL_SCRIPT"
+    # 本地直接执行
+    else
+        cp "$(realpath "$0")" "$LOCAL_SCRIPT"
+        chmod +x "$LOCAL_SCRIPT"
+    fi
 }
 
 # ================== 安装 Reality ==================
@@ -76,6 +98,11 @@ install_reality() {
     PORT=$port bash "$TMP_SCRIPT"
 
     echo -e "${green}Reality 安装完成！端口: $port${re}"
+    create_shortcut
+
+    echo -e "${green}即将返回菜单...${re}"
+    sleep 1
+    exec "$LOCAL_SCRIPT"
 }
 
 # ================== 卸载 Reality ==================
@@ -95,12 +122,9 @@ uninstall_reality() {
     echo -e "${green}✅ Reality 及快捷键已卸载${re}"
 }
 
-# ================== 下载自身到固定路径 ==================
-if [ ! -f "$LOCAL_SCRIPT" ]; then
-    echo -e "${yellow}⚠ 正在下载脚本到 $LOCAL_SCRIPT ...${re}"
-    curl -fsSL -o "$LOCAL_SCRIPT"https://raw.githubusercontent.com/iu683/FQ/main/Reality.sh
-    chmod +x "$LOCAL_SCRIPT"
-fi
+# ================== 保存自身并创建快捷键 ==================
+save_self
+create_shortcut
 
 # ================== 主菜单 ==================
 while true; do
@@ -119,8 +143,6 @@ while true; do
         1)
             clear
             install_reality
-            create_shortcut
-            read -p "按回车返回菜单..."
             ;;
         2)
             clear
