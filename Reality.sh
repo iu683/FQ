@@ -13,7 +13,15 @@ yellow="\033[33m"
 re="\033[0m"
 
 # ================== 固定路径 ==================
-SCRIPT_PATH="/usr/local/bin/reality_menu.sh"
+LOCAL_SCRIPT="/usr/local/bin/reality_menu.sh"
+
+# ================== 初始化自我复制 ==================
+# 如果当前脚本不是 /usr/local/bin/reality_menu.sh，就拷贝自己一份过去
+if [[ "$(realpath "$0")" != "$LOCAL_SCRIPT" ]]; then
+    mkdir -p /usr/local/bin
+    cp -f "$(realpath "$0")" "$LOCAL_SCRIPT"
+    chmod +x "$LOCAL_SCRIPT"
+fi
 
 # ================== 工具函数 ==================
 random_port() { shuf -i 2000-65000 -n 1; }
