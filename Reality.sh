@@ -93,24 +93,35 @@ install_reality() {
 # ================== 卸载 Reality ==================
 uninstall_reality() {
     echo -e "${yellow}正在卸载 Reality...${re}"
-    
-    # 停止服务
+
+    # 停止 systemd 服务（如果存在）
     systemctl stop reality 2>/dev/null
     systemctl disable reality 2>/dev/null
+    systemctl stop xray 2>/dev/null
+    systemctl disable xray 2>/dev/null
 
-    # 删除服务和文件
-    rm -f /usr/local/bin/reality
+    # 杀掉可能残留的后台进程
+    pkill -f web 2>/dev/null
+    pkill -f reality 2>/dev/null
+    pkill -f xray 2>/dev/null
+
+    # 删除服务文件
     rm -f /etc/systemd/system/reality.service
-    rm -rf ~/app /etc/reality
+    rm -f /etc/systemd/system/xray.service
+
+    # 删除二进制及配置
+    rm -f /usr/local/bin/reality /usr/local/bin/xray
+    rm -rf ~/app /etc/reality /usr/local/etc/xray
 
     # 删除菜单脚本及快捷键
     rm -f "$LOCAL_SCRIPT" /usr/local/bin/b /usr/local/bin/B
 
     systemctl daemon-reload 2>/dev/null
 
-    echo -e "${green}✅ Reality 已成功卸载${re}"
+    echo -e "${green}✅ Reality 已完全卸载，节点进程已停止${re}"
     exit 0
 }
+
 
 # ================== 主菜单 ==================
 while true; do
