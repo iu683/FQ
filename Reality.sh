@@ -13,15 +13,13 @@ yellow="\033[33m"
 re="\033[0m"
 
 # ================== 工具函数 ==================
-random_port() {
-    shuf -i 2000-65000 -n 1
-}
+random_port() { shuf -i 2000-65000 -n 1; }
 
 check_port() {
     local port=$1
     while [[ -n $(lsof -i :$port 2>/dev/null) ]]; do
-        echo -e "${red}${port}端口已经被占用，请更换端口重试${re}"
-        read -p "请输入端口（直接回车使用随机端口）: " port
+        echo -e "${red}${port}端口已被占用，请更换端口${re}"
+        read -p "请输入端口（回车随机端口）: " port
         [[ -z $port ]] && port=$(random_port) && echo -e "${green}使用随机端口: $port${re}"
     done
     echo $port
@@ -47,24 +45,23 @@ install_jq() {
     fi
 }
 
-# ================== 创建快捷键 ==================
+# ================== 创建快捷键（管道安全） ==================
 create_shortcut() {
     TARGET="/usr/local/bin/reality_menu.sh"
 
-    # 管道执行时，将内容写入文件
+    # 管道执行时，把脚本内容写入文件
     if [[ "$0" == "/dev/fd/"* || "$0" == "/proc/"* ]]; then
-        echo -e "${yellow}⚠ 当前脚本通过管道执行，正在自动保存到 $TARGET${re}"
-        cat > "$TARGET"
+        echo -e "${yellow}⚠ 当前脚本通过管道执行，正在保存到 $TARGET ...${re}"
+        tail -n +1 /proc/$$/fd/0 > "$TARGET"
         chmod +x "$TARGET"
     else
-        SCRIPT_PATH="$(realpath "$0")"
-        cp "$SCRIPT_PATH" "$TARGET"
+        cp "$(realpath "$0")" "$TARGET"
         chmod +x "$TARGET"
     fi
 
     ln -sf "$TARGET" /usr/local/bin/b
     ln -sf "$TARGET" /usr/local/bin/B
-    echo -e "${green}✅ 快捷键 b 和 B 已创建，可以在任意终端输入 b 或 B 启动脚本${re}"
+    echo -e "${green}✅ 快捷键 b 和 B 已创建${re}"
 }
 
 # ================== 下载 Reality 安装脚本 ==================
@@ -93,7 +90,6 @@ while true; do
             clear
             install_lsof
             install_jq
-
             read -p $'\033[1;32m请输入Reality节点端口（回车随机端口）: \033[0m' port
             [[ -z $port ]] && port=$(random_port)
             port=$(check_port $port)
@@ -103,10 +99,7 @@ while true; do
             PORT=$port bash "$REALITY_SCRIPT"
 
             echo -e "${green}Reality 安装完成！端口: $port${re}"
-
-            # 安装完成后立即创建快捷键
             create_shortcut
-
             read -p "按回车返回菜单..."
             ;;
         2)
@@ -139,16 +132,12 @@ while true; do
             new_port=$(check_port $new_port)
 
             if [ -f "/etc/alpine-release" ]; then
-                jq --argjson new_port "$new_port" \
-                   '(.inbounds[] | select(.protocol=="vless")).port = $new_port' \
-                   ~/app/config.json > tmp.json && mv tmp.json ~/app/config.json
+                jq --argjson new_port "$new_port" '(.inbounds[] | select(.protocol=="vless")).port = $new_port' ~/app/config.json > tmp.json && mv tmp.json ~/app/config.json
                 pkill -f 'web'
                 cd ~/app
                 nohup ./web -c config.json >/dev/null 2>&1 &
             else
-                jq --argjson new_port "$new_port" \
-                   '(.inbounds[] | select(.protocol=="vless")).port = $new_port' \
-                   /usr/local/etc/xray/config.json > tmp.json && mv tmp.json /usr/local/etc/xray/config.json
+                jq --argjson new_port "$new_port" '(.inbounds[] | select(.protocol=="vless")).port = $new_port' /usr/local/etc/xray/config.json > tmp.json && mv tmp.json /usr/local/etc/xray/config.json
                 systemctl restart xray.service
             fi
             echo -e "${green}Reality端口已更换成 $new_port，请手动更新客户端配置！${re}"
@@ -156,28 +145,17 @@ while true; do
             ;;
         4)
             clear
-            # 停止并删除 Reality
             if [ -f "/etc/alpine-release" ]; then
                 pkill -f 'web'
                 rm -rf ~/app
             else
                 systemctl stop xray 2>/dev/null
                 systemctl disable xray 2>/dev/null
-                rm -f /usr/local/bin/xray \
-                      /etc/systemd/system/xray.service \
-                      /usr/local/etc/xray/config.json \
-                      /usr/local/share/xray/geoip.dat \
-                      /usr/local/share/xray/geosite.dat \
-                      /etc/systemd/system/xray@.service
+                rm -f /usr/local/bin/xray /etc/systemd/system/xray.service /usr/local/etc/xray/config.json /usr/local/share/xray/geoip.dat /usr/local/share/xray/geosite.dat /etc/systemd/system/xray@.service
                 rm -rf /var/log/xray /var/lib/xray
                 systemctl daemon-reload
             fi
-
-            # 删除快捷键 b 和 B
-            rm -f /usr/local/bin/reality_menu.sh
-            rm -f /usr/local/bin/b
-            rm -f /usr/local/bin/B
-
+            rm -f /usr/local/bin/reality_menu.sh /usr/local/bin/b /usr/local/bin/B
             echo -e "${green}✅ Reality 及快捷键已卸载${re}"
             read -p "按回车返回菜单..."
             ;;
