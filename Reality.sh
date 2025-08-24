@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# ================== 检查是否 root ==================
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[31m请使用 root 用户运行此脚本！\033[0m"
+    exit 1
+fi
+
 # ================== 颜色定义 ==================
 green="\033[32m"
 red="\033[31m"
@@ -41,6 +47,16 @@ install_jq() {
     fi
 }
 
+# ================== 创建快捷键 ==================
+create_shortcut() {
+    SCRIPT_PATH="$(realpath "$0")"
+    cp "$SCRIPT_PATH" /usr/local/bin/reality_menu.sh
+    chmod +x /usr/local/bin/reality_menu.sh
+    ln -sf /usr/local/bin/reality_menu.sh /usr/local/bin/b
+    ln -sf /usr/local/bin/reality_menu.sh /usr/local/bin/B
+    echo -e "${green}✅ 快捷键 b 和 B 已创建，可以在任意终端输入 b 或 B 启动脚本${re}"
+}
+
 # ================== 主菜单 ==================
 while true; do
     clear
@@ -58,6 +74,8 @@ while true; do
         1)
             clear
             install_lsof
+            install_jq
+
             read -p $'\033[1;32m请输入Reality节点端口（回车随机端口）: \033[0m' port
             [[ -z $port ]] && port=$(random_port)
             port=$(check_port $port)
@@ -66,9 +84,11 @@ while true; do
             PORT=$port bash <(curl -fsSL https://raw.githubusercontent.com/Polarisiu/proxy/main/azreality.sh)
 
             echo -e "${green}Reality 安装完成！端口: $port${re}"
+
+            create_shortcut
+
             read -p "按回车返回菜单..."
             ;;
-
         2)
             clear
             echo -e "${green}正在检查 Reality 运行状态...${re}"
@@ -91,7 +111,6 @@ while true; do
             fi
             read -p "按回车返回菜单..."
             ;;
-
         3)
             clear
             install_jq
@@ -115,9 +134,9 @@ while true; do
             echo -e "${green}Reality端口已更换成 $new_port，请手动更新客户端配置！${re}"
             read -p "按回车返回菜单..."
             ;;
-
         4)
             clear
+            # 停止并删除 Reality
             if [ -f "/etc/alpine-release" ]; then
                 pkill -f 'web'
                 rm -rf ~/app
@@ -133,15 +152,19 @@ while true; do
                 rm -rf /var/log/xray /var/lib/xray
                 systemctl daemon-reload
             fi
-            echo -e "${green}Reality 已卸载${re}"
+
+            # 删除快捷键 b 和 B
+            rm -f /usr/local/bin/reality_menu.sh
+            rm -f /usr/local/bin/b
+            rm -f /usr/local/bin/B
+
+            echo -e "${green}✅ Reality 及快捷键已卸载${re}"
             read -p "按回车返回菜单..."
             ;;
-
         0)
             echo -e "${green}已退出脚本${re}"
             exit 0
             ;;
-
         *)
             echo -e "${red}无效输入！${re}"
             sleep 1
