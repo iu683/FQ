@@ -49,11 +49,21 @@ install_jq() {
 
 # ================== 创建快捷键 ==================
 create_shortcut() {
-    SCRIPT_PATH="$(realpath "$0")"
-    cp "$SCRIPT_PATH" /usr/local/bin/reality_menu.sh
-    chmod +x /usr/local/bin/reality_menu.sh
-    ln -sf /usr/local/bin/reality_menu.sh /usr/local/bin/b
-    ln -sf /usr/local/bin/reality_menu.sh /usr/local/bin/B
+    TARGET="/usr/local/bin/reality_menu.sh"
+
+    # 管道执行时，将内容写入文件
+    if [[ "$0" == "/dev/fd/"* || "$0" == "/proc/"* ]]; then
+        echo -e "${yellow}⚠ 当前脚本通过管道执行，正在自动保存到 $TARGET${re}"
+        cat > "$TARGET"
+        chmod +x "$TARGET"
+    else
+        SCRIPT_PATH="$(realpath "$0")"
+        cp "$SCRIPT_PATH" "$TARGET"
+        chmod +x "$TARGET"
+    fi
+
+    ln -sf "$TARGET" /usr/local/bin/b
+    ln -sf "$TARGET" /usr/local/bin/B
     echo -e "${green}✅ 快捷键 b 和 B 已创建，可以在任意终端输入 b 或 B 启动脚本${re}"
 }
 
