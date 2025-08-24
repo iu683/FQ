@@ -16,7 +16,6 @@ re="\033[0m"
 LOCAL_SCRIPT="/usr/local/bin/reality_menu.sh"
 
 # ================== 初始化自我复制 ==================
-# 如果当前脚本不是 /usr/local/bin/reality_menu.sh，就拷贝自己一份过去
 if [[ "$(realpath "$0")" != "$LOCAL_SCRIPT" ]]; then
     mkdir -p /usr/local/bin
     cp -f "$(realpath "$0")" "$LOCAL_SCRIPT"
@@ -64,7 +63,7 @@ download_reality_script() {
     echo "$TMP_SCRIPT"
 }
 
-# ================== 保存自身并创建快捷键（仅一次） ==================
+# ================== 创建快捷键（只提示一次） ==================
 create_shortcut() {
     if [[ ! -f /usr/local/bin/b || ! -f /usr/local/bin/B ]]; then
         ln -sf "$LOCAL_SCRIPT" /usr/local/bin/b
@@ -78,7 +77,7 @@ create_shortcut() {
 install_reality() {
     install_lsof
     install_jq
-    read -p "请输入Reality节点端口（回车随机端口）: " port
+    read -p "请输入 Reality 节点端口（回车随机端口）: " port
     [[ -z $port ]] && port=$(random_port)
     port=$(check_port $port)
 
@@ -87,7 +86,6 @@ install_reality() {
     PORT=$port bash "$TMP_SCRIPT"
 
     echo -e "${green}✅ Reality 安装完成！端口: $port${re}"
-
     create_shortcut
     read -rp "按回车返回菜单..."
 }
@@ -96,20 +94,17 @@ install_reality() {
 uninstall_reality() {
     echo -e "${yellow}正在卸载 Reality...${re}"
     
-    # 停止 Reality 服务（如果有）
+    # 停止服务
     systemctl stop reality 2>/dev/null
     systemctl disable reality 2>/dev/null
 
-    # 删除 Reality 文件
+    # 删除服务和文件
     rm -f /usr/local/bin/reality
     rm -f /etc/systemd/system/reality.service
+    rm -rf ~/app /etc/reality
 
-    # 删除菜单脚本
-    rm -f "$LOCAL_SCRIPT"
-
-    # 删除快捷方式
-    rm -f /usr/local/bin/b
-    rm -f /usr/local/bin/B
+    # 删除菜单脚本及快捷键
+    rm -f "$LOCAL_SCRIPT" /usr/local/bin/b /usr/local/bin/B
 
     systemctl daemon-reload 2>/dev/null
 
@@ -132,7 +127,7 @@ while true; do
     read -p $'\033[1;32m请输入你的选择: \033[0m' sub_choice
     case $sub_choice in
         1) install_reality ;;
-        2) # 查看状态
+        2)
             clear
             echo -e "${green}正在检查 Reality 运行状态...${re}"
             if [ -f "/etc/alpine-release" ]; then
@@ -154,7 +149,7 @@ while true; do
             fi
             read -rp "按回车返回菜单..."
             ;;
-        3) # 改端口
+        3)
             clear
             install_jq
             read -p "请输入新 Reality 端口（回车随机端口）: " new_port
@@ -169,7 +164,7 @@ while true; do
                 jq --argjson new_port "$new_port" '(.inbounds[] | select(.protocol=="vless")).port = $new_port' /usr/local/etc/xray/config.json > tmp.json && mv tmp.json /usr/local/etc/xray/config.json
                 systemctl restart xray.service
             fi
-            echo -e "${green}✅ Reality端口已更换成 $new_port${re}"
+            echo -e "${green}✅ Reality 端口已更换成 $new_port${re}"
             read -rp "按回车返回菜单..."
             ;;
         4) uninstall_reality ;;
