@@ -64,16 +64,15 @@ download_reality_script() {
     echo "$TMP_SCRIPT"
 }
 
-# ================== 保存自身并创建快捷键 ==================
-    # 创建快捷方式（只提示一次）
+# ================== 保存自身并创建快捷键（仅一次） ==================
+create_shortcut() {
     if [[ ! -f /usr/local/bin/b || ! -f /usr/local/bin/B ]]; then
         ln -sf "$LOCAL_SCRIPT" /usr/local/bin/b
         ln -sf "$LOCAL_SCRIPT" /usr/local/bin/B
         chmod +x /usr/local/bin/b /usr/local/bin/B
         echo -e "${green}✅ 快捷键 b 和 B 已创建，可以直接在终端使用 b 或 B 启动脚本${re}"
     fi
-
-
+}
 
 # ================== 安装 Reality ==================
 install_reality() {
@@ -88,6 +87,8 @@ install_reality() {
     PORT=$port bash "$TMP_SCRIPT"
 
     echo -e "${green}✅ Reality 安装完成！端口: $port${re}"
+
+    create_shortcut
     read -rp "按回车返回菜单..."
 }
 
@@ -104,6 +105,7 @@ uninstall_reality() {
     echo -e "${green}✅ Reality 已卸载完成${re}"
     exit 0
 }
+
 # ================== 主菜单 ==================
 while true; do
     clear
@@ -119,7 +121,7 @@ while true; do
     read -p $'\033[1;32m请输入你的选择: \033[0m' sub_choice
     case $sub_choice in
         1) install_reality ;;
-        2)
+        2) # 查看状态
             clear
             echo -e "${green}正在检查 Reality 运行状态...${re}"
             if [ -f "/etc/alpine-release" ]; then
@@ -141,7 +143,7 @@ while true; do
             fi
             read -rp "按回车返回菜单..."
             ;;
-        3)
+        3) # 改端口
             clear
             install_jq
             read -p "请输入新 Reality 端口（回车随机端口）: " new_port
