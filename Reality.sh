@@ -57,15 +57,15 @@ download_reality_script() {
 }
 
 # ================== 保存自身并创建快捷键 ==================
-if [ ! -f "$SCRIPT_PATH" ]; then
-    cp "$0" "$SCRIPT_PATH"
-    chmod +x "$SCRIPT_PATH"
-    # 添加快捷命令 b 和 B
-    echo -e '#!/bin/bash\nbash /usr/local/bin/reality_menu.sh' > /usr/local/bin/b
-    echo -e '#!/bin/bash\nbash /usr/local/bin/reality_menu.sh' > /usr/local/bin/B
-    chmod +x /usr/local/bin/b /usr/local/bin/B
-    echo -e "${green}✅ 脚本已保存到 $SCRIPT_PATH，快捷键 b/B 可用${re}"
-fi
+    # 创建快捷方式（只提示一次）
+    if [[ ! -f /usr/local/bin/b || ! -f /usr/local/bin/B ]]; then
+        ln -sf "$LOCAL_SCRIPT" /usr/local/bin/b
+        ln -sf "$LOCAL_SCRIPT" /usr/local/bin/B
+        chmod +x /usr/local/bin/b /usr/local/bin/B
+        echo -e "${green}✅ 快捷键 b 和 B 已创建，可以直接在终端使用 b 或 B 启动脚本${re}"
+    fi
+
+
 
 # ================== 安装 Reality ==================
 install_reality() {
