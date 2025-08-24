@@ -56,9 +56,7 @@ download_reality_script() {
     echo "$TMP_SCRIPT"
 }
 
-# ================== 创建快捷键 ==================
-
-# ================== 保存自身到固定路径（管道安全） ==================
+# ================== 保存自身并创建快捷键 ==================
 if [ ! -f "$SCRIPT_PATH" ]; then
     cp "$0" "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
@@ -68,7 +66,6 @@ if [ ! -f "$SCRIPT_PATH" ]; then
     chmod +x /usr/local/bin/b /usr/local/bin/B
     echo -e "${green}✅ 脚本已保存到 $SCRIPT_PATH，快捷键 b/B 可用${re}"
 fi
-
 
 # ================== 安装 Reality ==================
 install_reality() {
@@ -82,12 +79,8 @@ install_reality() {
     TMP_SCRIPT=$(download_reality_script)
     PORT=$port bash "$TMP_SCRIPT"
 
-    echo -e "${green}Reality 安装完成！端口: $port${re}"
-    create_shortcut
-
-    echo -e "${green}即将返回菜单...${re}"
-    sleep 1
-    exec "$LOCAL_SCRIPT"
+    echo -e "${green}✅ Reality 安装完成！端口: $port${re}"
+    read -rp "按回车返回菜单..."
 }
 
 # ================== 卸载 Reality ==================
@@ -103,13 +96,10 @@ uninstall_reality() {
         systemctl daemon-reload
     fi
 
-    rm -f "$LOCAL_SCRIPT" /usr/local/bin/b /usr/local/bin/B
+    rm -f "$SCRIPT_PATH" /usr/local/bin/b /usr/local/bin/B
     echo -e "${green}✅ Reality 及快捷键已卸载${re}"
+    read -rp "按回车返回菜单..."
 }
-
-# ================== 保存自身并创建快捷键 ==================
-save_self
-create_shortcut
 
 # ================== 主菜单 ==================
 while true; do
@@ -125,10 +115,7 @@ while true; do
 
     read -p $'\033[1;32m请输入你的选择: \033[0m' sub_choice
     case $sub_choice in
-        1)
-            clear
-            install_reality
-            ;;
+        1) install_reality ;;
         2)
             clear
             echo -e "${green}正在检查 Reality 运行状态...${re}"
@@ -149,7 +136,7 @@ while true; do
                     echo -e "${red}❌ Reality 未运行${re}"
                 fi
             fi
-            read -p "按回车返回菜单..."
+            read -rp "按回车返回菜单..."
             ;;
         3)
             clear
@@ -161,29 +148,16 @@ while true; do
             if [ -f "/etc/alpine-release" ]; then
                 jq --argjson new_port "$new_port" '(.inbounds[] | select(.protocol=="vless")).port = $new_port' ~/app/config.json > tmp.json && mv tmp.json ~/app/config.json
                 pkill -f 'web'
-                cd ~/app
-                nohup ./web -c config.json >/dev/null 2>&1 &
+                cd ~/app && nohup ./web -c config.json >/dev/null 2>&1 &
             else
                 jq --argjson new_port "$new_port" '(.inbounds[] | select(.protocol=="vless")).port = $new_port' /usr/local/etc/xray/config.json > tmp.json && mv tmp.json /usr/local/etc/xray/config.json
                 systemctl restart xray.service
             fi
-            echo -e "${green}Reality端口已更换成 $new_port，请手动更新客户端配置！${re}"
-            read -p "按回车返回菜单..."
+            echo -e "${green}✅ Reality端口已更换成 $new_port${re}"
+            read -rp "按回车返回菜单..."
             ;;
-        4)
-            clear
-            uninstall_reality
-            read -p "按回车返回菜单..."
-            ;;
-        0)
-            echo -e "${green}已退出脚本${re}"
-            exit 0
-            ;;
-        *)
-            echo -e "${red}无效输入！${re}"
-            sleep 1
-            ;;
+        4) uninstall_reality ;;
+        0) echo -e "${green}已退出脚本${re}"; exit 0 ;;
+        *) echo -e "${red}无效输入！${re}"; sleep 1 ;;
     esac
-    echo
-    read -rp "按回车返回菜单..."
 done
